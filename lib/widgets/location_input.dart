@@ -1,3 +1,4 @@
+import 'package:favorite_places_app/models/place.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:location/location.dart';
@@ -12,8 +13,15 @@ class LocationInput extends StatefulWidget {
 }
 
 class _LocationInputState extends State<LocationInput> {
-  Location? _pickedLocation;
+  PlaceLocation? _pickedLocation;
   var _isGettingLocation = false;
+  final apiKey = dotenv.env['API_KEY'];
+
+  String get locationImage {
+    final lat = _pickedLocation!.latitude;
+    final lng = _pickedLocation!.longitude;
+    return 'https://maps.googleapis.com/maps/api/staticmap?center=$lat,$lng&zoom=16&size=600x300&maptype=roadmap&markers=color:red%7Clabel:S%7C$lat,$lng&key=$apiKey';
+  }
 
   void _getCurrentLocation() async {
     Location location = Location();
@@ -46,7 +54,11 @@ class _LocationInputState extends State<LocationInput> {
 
     final lat = locationData.latitude;
     final lng = locationData.longitude;
-    final apiKey = dotenv.env['API_KEY'];
+
+    if (lat == null || lng == null) {
+      return;
+    }
+
     final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey');
     final response = await http.get(url);
@@ -54,7 +66,10 @@ class _LocationInputState extends State<LocationInput> {
     final address = resData['results'][0]['formatted_address'];
 
     setState(() {
+      _pickedLocation =
+          PlaceLocation(latitude: lat, longitude: lng, address: address);
       _isGettingLocation = false;
+      print(_pickedLocation);
     });
   }
 
@@ -67,6 +82,15 @@ class _LocationInputState extends State<LocationInput> {
             color: Theme.of(context).colorScheme.onBackground,
           ),
     );
+
+    if (_pickedLocation != null) {
+      previewContent = Image.network(
+        locationImage,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
 
     if (_isGettingLocation) {
       previewContent = const CircularProgressIndicator();
